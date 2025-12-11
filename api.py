@@ -9,18 +9,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class GitHubAPIError(Exception):
+    """Custom exception for GitHub-related errors."""
     pass
 
-def get_handers():
+def get_headers():
+    """Headers for GitHub API (with token if available)."""
     headers = {
         "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "github-roaster-app"
+        "User-Agent": "github-roaster-app",
     }
     if GITHUB_TOKEN:
         headers["Authorization"] = f"token {GITHUB_TOKEN}"
     return headers
 
 def validate_username(username: str) -> bool:
+    """Validate GitHub username with regex and length rules."""
     import re
     from config import VALID_USERNAME_PATTERN
 
@@ -29,6 +32,7 @@ def validate_username(username: str) -> bool:
     return bool(re.match(VALID_USERNAME_PATTERN, username))
 
 def get_user_profile(username: str) -> dict:
+    """Fetch basic user profile from GitHub."""
     if not validate_username(username):
         raise GitHubAPIError(f"Invalid username: {username}")
 
@@ -66,6 +70,7 @@ def get_user_profile(username: str) -> dict:
         raise GitHubAPIError(f"Failed to fetch profile: {e}")
 
 def get_user_repos(username: str, limit: int | None = None) -> list:
+    """Fetch top repositories by stars for a user."""
     if limit is None:
         limit = GITHUB_REPO_LIMIT
 
@@ -100,6 +105,7 @@ def get_user_repos(username: str, limit: int | None = None) -> list:
         return []
 
 def get_user_languages(username: str, limit: int = 3) -> list:
+    """Count languages across user's repos."""
     url = f"{GITHUB_API_BASE}/users/{username}/repos"
     headers = get_headers()
     params = {"per_page": 100}
@@ -118,6 +124,7 @@ def get_user_languages(username: str, limit: int = 3) -> list:
         return []
 
 def get_complete_profile(username: str) -> dict:
+    """Combine basic profile + top repos + top languages + years on GitHub."""
     profile = get_user_profile(username)
     profile["top_repos"] = get_user_repos(username, limit=5)
     profile["top_languages"] = get_user_languages(username, limit=3)
