@@ -1,6 +1,7 @@
 import logging
 from groq import Groq  # Groq client (OpenAI-style)
-from config import GROQ_API_KEY, GROQ_MODEL, ROAST_TEMPERATURE, MAX_ROAST_LENGTH
+from .config import GROQ_API_KEY, GROQ_MODEL, ROAST_TEMPERATURE, MAX_ROAST_LENGTH
+
 
 logger = logging.getLogger(__name__)
 

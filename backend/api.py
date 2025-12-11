@@ -1,16 +1,20 @@
+# backend/api.py
+
 import requests
 import logging
 from collections import Counter
 from datetime import datetime
 
-from config import GITHUB_TOKEN, GITHUB_API_BASE, GITHUB_REPO_LIMIT
+from .config import GITHUB_TOKEN, GITHUB_API_BASE, GITHUB_REPO_LIMIT
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class GitHubAPIError(Exception):
     """Custom exception for GitHub-related errors."""
     pass
+
 
 def get_headers():
     """Headers for GitHub API (with token if available)."""
@@ -22,14 +26,16 @@ def get_headers():
         headers["Authorization"] = f"token {GITHUB_TOKEN}"
     return headers
 
+
 def validate_username(username: str) -> bool:
     """Validate GitHub username with regex and length rules."""
     import re
-    from config import VALID_USERNAME_PATTERN
+    from .config import VALID_USERNAME_PATTERN
 
     if not username or len(username) > 39:
         return False
     return bool(re.match(VALID_USERNAME_PATTERN, username))
+
 
 def get_user_profile(username: str) -> dict:
     """Fetch basic user profile from GitHub."""
@@ -69,6 +75,7 @@ def get_user_profile(username: str) -> dict:
         logger.error(f"Error fetching {username}: {e}")
         raise GitHubAPIError(f"Failed to fetch profile: {e}")
 
+
 def get_user_repos(username: str, limit: int | None = None) -> list:
     """Fetch top repositories by stars for a user."""
     if limit is None:
@@ -104,6 +111,7 @@ def get_user_repos(username: str, limit: int | None = None) -> list:
         logger.warning(f"Failed to fetch repos for {username}: {e}")
         return []
 
+
 def get_user_languages(username: str, limit: int = 3) -> list:
     """Count languages across user's repos."""
     url = f"{GITHUB_API_BASE}/users/{username}/repos"
@@ -123,6 +131,7 @@ def get_user_languages(username: str, limit: int = 3) -> list:
         logger.warning(f"Failed to fetch languages for {username}: {e}")
         return []
 
+
 def get_complete_profile(username: str) -> dict:
     """Combine basic profile + top repos + top languages + years on GitHub."""
     profile = get_user_profile(username)
@@ -135,6 +144,7 @@ def get_complete_profile(username: str) -> dict:
 
     logger.info(f"Fetched complete profile for {username}")
     return profile
+
 
 if __name__ == "__main__":
     try:
