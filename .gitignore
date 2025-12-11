@@ -1,0 +1,23 @@
+# Environments
+env/
+venv/
+.venv/
+.conda/
+.github-roasting/
+
+# Secrets
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/
