@@ -9,9 +9,17 @@ from .config import (
     MAX_ROAST_LENGTH,
 )
 
+# Enforce a fixed word limit for roasts
+ROAST_WORD_LIMIT = 100
+
 
 class RoastGenerationError(Exception):
     pass
+
+
+def _enforce_word_limit(text: str, limit: int = ROAST_WORD_LIMIT) -> str:
+    words = text.split()
+    return " ".join(words[:limit]).strip()
 
 
 def _format_profile_for_prompt(profile: Dict[str, Any]) -> str:
@@ -59,7 +67,7 @@ async def generate_roast(profile: Dict[str, Any]) -> str:
         "Given details about a developer's GitHub profile and repositories, "
         "write a short, humorous roast about their coding style, activity, and habits. "
         "Stay light-hearted, avoid anything offensive or personal beyond the data provided. "
-        f"Limit the roast to around {MAX_ROAST_LENGTH} characters."
+        f"Keep the roast to exactly {ROAST_WORD_LIMIT} words."
     )
 
     user_prompt = (
@@ -86,4 +94,4 @@ async def generate_roast(profile: Dict[str, Any]) -> str:
     except Exception as exc:
         raise RoastGenerationError(f"Unexpected Groq response format: {exc}") from exc
 
-    return content.strip()
+    return _enforce_word_limit(content.strip(), ROAST_WORD_LIMIT)

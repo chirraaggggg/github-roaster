@@ -59,6 +59,19 @@ const GitHubRoaster = () => {
   }, []);
 
   useEffect(() => {
+    const body = document.body;
+    const previous = body.style.overflow;
+    if (isRoastPage) {
+      body.style.overflow = 'hidden';
+    } else {
+      body.style.overflow = '';
+    }
+    return () => {
+      body.style.overflow = previous;
+    };
+  }, [isRoastPage]);
+
+  useEffect(() => {
     if (!isRoastPage || !usernameParam) {
       return;
     }
@@ -141,7 +154,7 @@ const GitHubRoaster = () => {
         {!isRoastPage && (
           <header className="hero" id="home">
             <h1 className="hero-title">GITHUB ROASTER</h1>
-            <p className="hero-subtitle">COMMITS COOKED, ROASTING ON</p>
+            <p className="hero-subtitle">Get Cooked (your commits)</p>
           </header>
         )}
 
@@ -149,7 +162,7 @@ const GitHubRoaster = () => {
           <>
             <section className="main-card">
               <div className="card-header">
-                <span className="card-title">GITHUB_ROASTER.EXE</span>
+                <span className="card-title">GIT_COOKED.EXE</span>
                 <span className="card-close">✕</span>
               </div>
 
