@@ -1,65 +1,61 @@
-# backend/app.py
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
-from .api import get_complete_profile, GitHubAPIError
 from .roast import generate_roast, RoastGenerationError
-
+from .api import fetch_github_profile
 
 app = FastAPI(
-    title="GitHub Roaster API",
-    description="Backend for roasting GitHub profiles using Groq LLM",
+    title="GitHub Roaster",
     version="1.0.0",
 )
 
-# CORS so your React app can call this API from another origin
+# CORS so Vite frontend (localhost:5173) can call this API
 origins = [
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:3000",  # Create React App / Next.js dev
-    "*",                      # relax during development; tighten in prod
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,      # or ["*"] during local dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-class RoastRequest(BaseModel):
-    username: str
-
-
-class RoastResponse(BaseModel):
-    profile: dict
-    roast: str
-
-
 @app.get("/health")
-async def health():
+async def health_check():
     return {"status": "ok"}
 
 
-@app.post("/roast", response_model=RoastResponse)
-async def roast_endpoint(payload: RoastRequest):
-    username = payload.username.strip()
+@app.post("/roast")
+async def roast_user(payload: dict):
+    """
+    Expected JSON body: { "username": "<github-username>" }
+    """
+    username = payload.get("username")
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
 
-    # 1) GitHub profile + stats
+    # 1. Fetch GitHub profile
     try:
-        profile = get_complete_profile(username)
-    except GitHubAPIError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        profile = await fetch_github_profile(username)
+    except HTTPException:
+        # Re-raise if your fetch_github_profile already throws HTTPException
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch GitHub profile")
 
-    # 2) Roast from Groq LLM
+    # 2. Generate roast with Groq / LLM
     try:
-        roast = generate_roast(profile)
+        roast = await generate_roast(profile)
     except RoastGenerationError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to generate roast")
 
-    return RoastResponse(profile=profile, roast=roast)
+    return {
+        "profile": profile,
+        "roast": roast,
+    }
