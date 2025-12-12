@@ -1,90 +1,89 @@
-import logging
-from groq import Groq  # Groq client (OpenAI-style)
-from .config import GROQ_API_KEY, GROQ_MODEL, ROAST_TEMPERATURE, MAX_ROAST_LENGTH
+from typing import Any, Dict
 
+from groq import AsyncGroq  # <-- change here
 
-logger = logging.getLogger(__name__)
+from .config import (
+    GROQ_API_KEY,
+    GROQ_MODEL,
+    ROAST_TEMPERATURE,
+    MAX_ROAST_LENGTH,
+)
+
 
 class RoastGenerationError(Exception):
     pass
 
-# Initialize Groq client
-client = Groq(api_key=GROQ_API_KEY)
 
-def build_roast_prompt(profile: dict) -> str:
-    """Build a detailed prompt from a GitHub profile."""
-    repos_str = ", ".join(
-        [f"{r['name']} ({r['stars']}⭐)" for r in profile.get("top_repos", [])[:3]]
-    )
-    langs_str = ", ".join(
-        [f"{lang[0]} ({lang[1]})" for lang in profile.get("top_languages", [])]
-    )
+def _format_profile_for_prompt(profile: Dict[str, Any]) -> str:
+    """Format the GitHub profile data into a string for the prompt."""
+    name = profile.get("name") or profile.get("login")
+    bio = profile.get("bio") or "No bio"
+    public_repos = profile.get("public_repos", 0)
+    followers = profile.get("followers", 0)
+    total_stars = profile.get("total_stars", 0)
+    total_forks = profile.get("total_forks", 0)
 
-    prompt = f"""You are a hilarious comedian roasting GitHub profiles.
-Create a fun, light-hearted roast for this developer:
+    lines = [
+        f"Username: {profile.get('login')}",
+        f"Name: {name}",
+        f"Bio: {bio}",
+        f"Public repos: {public_repos}",
+        f"Followers: {followers}",
+        f"Total stars: {total_stars}",
+        f"Total forks: {total_forks}",
+        "",
+        "Top repos:",
+    ]
 
-Profile Info:
-- Name: {profile['name']}
-- Username: @{profile['username']}
-- Repositories: {profile['public_repos']}
-- Followers: {profile['followers']}
-- Following: {profile['following']}
-- Years on GitHub: {profile['years_on_github']}
-- Bio: {profile['bio'][:100]}
-- Top Repos: {repos_str or 'None worth mentioning'}
-- Languages: {langs_str or 'Mystery languages'}
-- Location: {profile['location']}
-
-Requirements:
-1. Reference specific stats from the profile.
-2. Be playful, not mean.
-3. Use 4–6 sentences.
-4. End with something positive or encouraging.
-5. Use developer/tech humor where possible.
-
-Generate the roast now:"""
-    return prompt
-
-def generate_roast(profile: dict) -> str:
-    """Generate a roast using Groq LLM."""
-    if not GROQ_API_KEY:
-        raise RoastGenerationError("GROQ_API_KEY not configured in .env")
-
-    try:
-        prompt = build_roast_prompt(profile)
-
-        response = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a friendly, witty comedian who roasts GitHub profiles. Keep it fun!",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            temperature=ROAST_TEMPERATURE,
-            max_tokens=300,
-            top_p=0.95,
+    for repo in profile.get("top_repos", []):
+        lines.append(
+            f"- {repo.get('name')} | stars={repo.get('stargazers_count', 0)}, "
+            f"forks={repo.get('forks_count', 0)}, lang={repo.get('language') or 'N/A'}, "
+            f"desc={repo.get('description') or 'No description'}"
         )
 
-        roast = response.choices[0].message.content.strip()
+    return "\n".join(lines)
 
-        if len(roast) > MAX_ROAST_LENGTH:
-            roast = roast[:MAX_ROAST_LENGTH].rsplit(" ", 1)[0] + "..."
 
-        logger.info(f"Generated roast for {profile['username']}")
-        return roast
+async def generate_roast(profile: Dict[str, Any]) -> str:
+    if not GROQ_API_KEY:
+        raise RoastGenerationError("GROQ_API_KEY is not set")
 
-    except Exception as e:
-        logger.error(f"Error generating roast: {e}")
-        raise RoastGenerationError(f"Failed to generate roast: {e}")
+    # use the async client
+    client = AsyncGroq(api_key=GROQ_API_KEY)
 
-if __name__ == "__main__":
-    from api import get_complete_profile
+    profile_text = _format_profile_for_prompt(profile)
+
+    system_prompt = (
+        "You are a sarcastic but playful GitHub roast bot. "
+        "Given details about a developer's GitHub profile and repositories, "
+        "write a short, humorous roast about their coding style, activity, and habits. "
+        "Stay light-hearted, avoid anything offensive or personal beyond the data provided. "
+        f"Limit the roast to around {MAX_ROAST_LENGTH} characters."
+    )
+
+    user_prompt = (
+        "Here is the GitHub user data:\n\n"
+        f"{profile_text}\n\n"
+        "Write the roast now."
+    )
 
     try:
-        profile = get_complete_profile("torvalds")
-        roast = generate_roast(profile)
-        print("🔥 Roast:\n", roast)
-    except Exception as e:
-        print("Error:", e)
+        chat_completion = await client.chat.completions.create(  # <-- await works now
+            model=GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=ROAST_TEMPERATURE,
+            max_tokens=MAX_ROAST_LENGTH,
+        )
+    except Exception as exc:
+        raise RoastGenerationError(f"Groq API error: {exc}") from exc
+
+    try:
+        content = chat_completion.choices[0].message.content
+    except Exception as exc:
+        raise RoastGenerationError(f"Unexpected Groq response format: {exc}") from exc
+
+    return content.strip()
