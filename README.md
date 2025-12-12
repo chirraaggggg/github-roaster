@@ -1,9 +1,218 @@
-# GitHub Profile Roaster 🔥
+# Git Cooked 🔥
 
-Fun web app that fetches a GitHub user's profile and generates a witty roast using OpenAI GPT.
+Git Cooked is a retro‑themed web app that **roasts your GitHub profile** using AI.  
+Paste a GitHub username, and Git Cooked fetches their public profile and repos, feeds them to an LLM, and serves a brutally honest (but playful) roast.
 
-## How to run locally
+---
 
-conda activate github-roasting
+## Tech Stack
+
+- **Frontend:** React + Vite (neon CRT / GitHub Wrapped‑style UI)
+- **Backend:** FastAPI (Python)
+- **LLM:** Groq API (Llama models)
+- **HTTP:** httpx for calling GitHub + Groq
+- **Env / tooling:** Conda, uvicorn
+
+---
+
+## Features
+
+- Roast any public GitHub user by username.
+- Fetches profile + repo stats from the GitHub API.
+- Uses Groq’s LLM to generate a custom roast.
+- CRT‑style, green‑on‑black “hacker” UI inspired by GitHub Wrapped.
+- CORS‑enabled API for local frontend development.
+
+---
+
+## Getting Started
+
+### 1. Clone the repo
+
+git clone https://github.com/chirraaggggg/github-roaster.git
+cd github-roaster
+
+text
+
+### 2. Backend setup (FastAPI)
+
+Create and activate the Conda env (or use your own):
+conda env create -f environment.yml # if present; otherwise create manually
+conda activate github-roaster
 pip install -r requirements.txt
-streamlit run app.py
+
+text
+
+Set up environment variables (GitHub + Groq) in the same shell:
+
+export GITHUB_TOKEN="your_real_github_pat"
+export GROQ_API_KEY="your_groq_api_key"
+
+Optional overrides:
+export GROQ_MODEL="llama-3.1-8b-instant"
+export ROAST_TEMPERATURE="0.9"
+export MAX_ROAST_LENGTH="500"
+text
+
+Run the backend from the project root:
+
+cd /Users/mac/Desktop/github-roaster # adjust if your path is different
+uvicorn backend.app:app --reload --port 8000
+
+text
+
+FastAPI docs will be available at:
+
+- `http://127.0.0.1:8000/docs`
+
+You should see `GET /health` and `POST /roast`.
+
+---
+
+### 3. Frontend setup (React + Vite)
+
+In another terminal:
+
+cd github-roaster/frontend
+npm install
+
+text
+
+Create a `.env.local` file:
+
+VITE_API_BASE_URL=http://127.0.0.1:8000
+
+text
+
+Start the dev server:
+
+npm run dev
+
+text
+
+Open the frontend at the URL printed by Vite (usually `http://127.0.0.1:5173`).
+
+---
+
+## Usage
+
+1. Open the frontend.
+2. Enter any GitHub username (e.g. `torvalds`).
+3. Click **GET ROASTED**.
+4. Read your roast and question your life choices.
+
+If you hit rate limits on GitHub (403), make sure `GITHUB_TOKEN` is set to a valid personal access token.
+
+---
+
+## Project Structure
+
+github-roaster/
+├── backend/
+│ ├── app.py # FastAPI app (routes, CORS, /health, /roast)
+│ ├── api.py # GitHub API client (httpx)
+│ ├── roast.py # Groq LLM integration and prompt logic
+│ ├── config.py # Environment configuration
+│ └── init.py
+├── frontend/
+│ ├── src/
+│ │ ├── App.jsx # Main UI
+│ │ └── components, styles, assets
+│ └── ...
+├── requirements.txt
+└── README.md
+
+text
+
+---
+
+## Environment Variables
+
+**Backend (`backend/config.py`):**
+
+- `GITHUB_TOKEN` – GitHub personal access token (strongly recommended to avoid rate limits).
+- `GITHUB_API_BASE` – defaults to `https://api.github.com`.
+- `GROQ_API_KEY` – Groq API key (required for roasts).
+- `GROQ_MODEL` – Groq model name (default: `llama-3.1-8b-instant` or similar).
+- `ROAST_TEMPERATURE` – controls randomness/spice of the roast.
+- `MAX_ROAST_LENGTH` – max characters / tokens for the roast.
+
+**Frontend:**
+
+- `VITE_API_BASE_URL` – URL of the FastAPI backend (e.g. `http://127.0.0.1:8000`).
+
+---
+
+## API
+
+### `GET /health`
+
+Simple health check.
+
+**Response:**
+
+{ "status": "ok" }
+
+text
+
+### `POST /roast`
+
+Generate a roast for a given GitHub username.
+
+**Request body:**
+
+{
+"username": "torvalds"
+}
+
+text
+
+**Response body (simplified):**
+
+{
+"profile": {
+"login": "torvalds",
+"avatar_url": "...",
+"html_url": "...",
+"public_repos": 0,
+"followers": 0,
+"total_stars": 0,
+"top_repos": [ ... ]
+},
+"roast": "Your roast text here..."
+}
+
+text
+
+On errors, returns a JSON with a `detail` field (e.g. “GitHub user not found”, “GitHub API rate limit exceeded”, “Groq API error: ...”).
+
+---
+
+## Roadmap / Ideas
+
+- “Roast strength” slider (mild → fully cooked).
+- Shareable roast cards (image export / Twitter share).
+- Simple leaderboard of most‑roasted users.
+- Per‑language roasts (Python dev vs JS dev jokes).
+- Deploy:
+  - Frontend on Vercel.
+  - Backend on Render/Fly.io/DigitalOcean.
+
+---
+
+## Contributing
+
+Issues and PRs are welcome!  
+If you have better roast prompts, UI tweaks, or deployment setups, feel free to open a discussion or pull request.
+
+1. Fork the repo.
+2. Create a feature branch.
+3. Commit your changes.
+4. Open a PR with a clear description and screenshots if it’s UI related.
+
+---
+
+## Disclaimer
+
+Git Cooked is for fun. Roasts are generated by an AI model using **public GitHub data** and are not meant to be taken seriously or as factual judgments.  
+If you get cooked too hard, that’s just motivation to push more commits. 😈
